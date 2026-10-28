@@ -45,6 +45,7 @@ main { max-width: 38rem; margin: 0 auto; min-width: 0; }
 }
 .bar strong { color: var(--fg); font-weight: 600; }
 
+.opt { display: flex; gap: 8px; align-items: center; font-family: var(--sans); font-size: 0.875rem; color: var(--muted); margin-top: 10px; cursor: pointer; }
 .legend { font-family: var(--sans); font-size: 0.875rem; line-height: 1.5; color: var(--muted); margin: 16px 0 0; }
 .mark, .w {
   text-decoration-line: underline;
@@ -135,6 +136,7 @@ article p.body { font-size: 1.125rem; line-height: 1.75; margin: 0 0 1.1em; max-
     <span class="mark">Dotted underline</span> = likely B2/C1 vocabulary (<span id="count">0</span> words here).
     Hover on desktop, or tap on mobile, to see the definition.
   </p>
+  <label class="opt" for="hide-cog"><input type="checkbox" id="hide-cog" checked> Hide words that look like English (cognates)</label>
 
   <form class="load" id="load">
     <label for="f-url">Link to an article
@@ -171,12 +173,87 @@ var KNOWN_MAX = 9000, B2_MAX = 25000, MIN_LEN = 5;
 var rank = null; // Map word -> rank (1 = most frequent)
 var TOKEN = /aujourd['’]hui|\p{L}+(?:-\p{L}+)*/gu;
 
-var rankReady = fetch("data/fr_words.txt")
+var en = null; // Map English word -> rank, used to spot cognates
+var EN_MAX = 40000;
+var hideCognates = true;
+
+var frReady = fetch("data/fr_words.txt")
   .then(function (r) { if (!r.ok) throw new Error("word list"); return r.text(); })
   .then(function (t) {
     rank = new Map();
     t.split("\n").forEach(function (w, i) { w = w.trim(); if (w && !rank.has(w)) rank.set(w, i + 1); });
   });
+var enReady = fetch("data/en_words.txt")
+  .then(function (r) { return r.ok ? r.text() : ""; })
+  .then(function (t) {
+    if (!t) return;
+    en = new Map();
+    t.split("\n").forEach(function (w, i) { w = w.trim(); if (w && !en.has(w)) en.set(w, i + 1); });
+  })
+  .catch(function () { en = null; });
+var rankReady = Promise.all([frReady, enReady]);
+
+// ---------- Cognates (French words with a clear English twin) ----------
+// Words that look alike but mean something different are never hidden.
+var FALSE_FRIENDS = new Set(("actuel actuelle actuels actuelles actuellement eventuel eventuelle eventuels eventuelles eventuellement " +
+  "sensible sensibles librairie assister assiste assistent pretendre pretend pretendent supporter supporte supportent " +
+  "deception deceptions location locations large larges blesse blessee blesses blessure blessures coin coins journee journees " +
+  "ignorer ignore ignoree ignores ignorent attendre attend attendent achever acheve achevent chance chances formidable formidables " +
+  "prejudice prejudices rester reste restent sale salement agenda agendas gentil gentille figure figures lecture lectures " +
+  "demander demande demandent injure injures versatile resumer resume resument preservatif").split(" "));
+
+var NOUN_SUFFIX = [["isation","ization"],["isation","ation"],["tion","tion"],["sion","sion"],["ique","ic"],["ique","ical"],["ique","y"],["iques","ics"],["aire","ary"],
+  ["eur","or"],["eur","er"],["euse","er"],["ite","ity"],["isme","ism"],["iste","ist"],["ive","ive"],["if","ive"],["aux","al"],
+  ["el","al"],["elle","al"],["ence","ence"],["ance","ance"],["ment","ment"],["ement","ely"],["oire","ory"],["ie","y"],["ier","er"],
+  ["ain","an"],["aine","an"],["eux","ous"],["euse","ous"],["ure","ure"],["age","age"],["ant","ant"],["ent","ent"],["ible","ible"],["able","able"]];
+var VERB_ENDINGS = ["iser","ier","er","ent","ons","ez","ees","ee","es","e","ant","ie","ies","s"];
+
+function strip(s) { return s.normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+
+function candidates(w) {
+  var out = {};
+  function add(c) {
+    if (c.length < 4) return;
+    out[c] = 1;
+    if (c.indexOf("ou") !== -1) out[c.replace("ou", "o")] = 1;   // approuver -> approve
+  }
+  var forms = [w];
+  if (/s$/.test(w)) forms.push(w.slice(0, -1));
+  if (/es$/.test(w)) forms.push(w.slice(0, -2));
+  if (/e$/.test(w)) forms.push(w.slice(0, -1));
+  forms.forEach(function (f) {
+    add(f); add(f + "e");
+    NOUN_SUFFIX.forEach(function (p) { if (f.slice(-p[0].length) === p[0]) add(f.slice(0, -p[0].length) + p[1]); });
+  });
+  VERB_ENDINGS.forEach(function (E) {
+    if (w.slice(-E.length) !== E) return;
+    var stem = w.slice(0, -E.length);
+    if (stem.length < 3) return;
+    add(stem); add(stem + "e"); add(stem + "ate"); add(stem + "y");
+    if (E === "iser" || /s$/.test(stem)) add(stem.slice(0, -1) + "ze");  // organiser -> organize
+    if (E === "iser") add(stem + "e");
+  });
+  return Object.keys(out);
+}
+
+function isCognate(word) {
+  if (!en) return false;
+  var raw = word.toLowerCase().replace(/’/g, "'");
+  if (raw.indexOf("-") !== -1) return false;
+  if (FALSE_FRIENDS.has(strip(raw))) return false;
+  var variants = [raw];
+  var circ = raw.replace(/ê/g, "es").replace(/ô/g, "os").replace(/â/g, "as").replace(/î/g, "is").replace(/û/g, "us");  // forêt -> forest
+  if (circ !== raw) variants.push(circ);
+  if (raw.charAt(0) === "é") variants.push("s" + raw.slice(1));                                                       // étrange -> strange
+  for (var i = 0; i < variants.length; i++) {
+    var cs = candidates(strip(variants[i]));
+    for (var j = 0; j < cs.length; j++) {
+      var r = en.get(cs[j]);
+      if (r !== undefined && r <= EN_MAX) return true;
+    }
+  }
+  return false;
+}
 
 function levelOf(token) {
   if (token.length < MIN_LEN) return "";
@@ -186,9 +263,10 @@ function levelOf(token) {
   var r = rank.get(w);
   if (r === undefined) {
     if (token.indexOf("-") !== -1 || token.length < 6) return "";  // unknown hyphenated or short: skip
-    return "C1";
+    return hideCognates && isCognate(token) ? "" : "C1";
   }
   if (r <= KNOWN_MAX) return "";
+  if (hideCognates && isCognate(token)) return "";
   return r <= B2_MAX ? "B2" : "C1";
 }
 
@@ -223,7 +301,9 @@ function safeUrl(u) {
   try { var p = new URL(u); return (p.protocol === "https:" || p.protocol === "http:") ? p.href : ""; } catch (e) { return ""; }
 }
 
+var lastArticle = null;
 function render(a) {
+  lastArticle = a;
   hideTip();
   count = 0;
   root.textContent = "";
@@ -408,6 +488,11 @@ document.addEventListener("keydown", function (e) { if (e.key === "Escape") hide
 window.addEventListener("scroll", function () { if (current) hideTip(); }, { passive: true });
 window.addEventListener("resize", function () { if (current) hideTip(); });
 
+$("hide-cog").addEventListener("change", function (e) {
+  hideCognates = e.target.checked;
+  if (lastArticle) render(lastArticle);
+});
+
 // ---------- Load an article from a link (through your Cloudflare proxy) ----------
 function setStatus(msg, isErr) { statusEl.textContent = msg || ""; statusEl.className = isErr ? "err" : ""; }
 
@@ -439,6 +524,20 @@ function jsonLdAuthors(doc) {
   return out;
 }
 
+// Paywall, login and promo lines that sit inside the article body.
+var BOILERPLATE = [
+  /cet article vous est offert/i, /pour lire gratuitement/i, /r[ée]serv[ée] aux abonn[ée]s/i, /vous n['’]?[êe]tes pas inscrit/i,
+  /inscrivez-vous gratuitement/i, /connectez-vous/i, /d[ée]j[àa] abonn[ée]/i, /accepter et continuer/i,
+  /^(se connecter|s['’]abonner|abonnez-vous|s['’]inscrire|inscrivez-vous|lire plus tard|partager|r[ée]utiliser ce contenu|ajouter aux favoris|offrir cet article|voir plus|lire la suite|lire aussi|lire également|à lire aussi|sur le même sujet|publicit[ée]|newsletter|contribuer)\b/i
+];
+function cleanParas(paras) {
+  return paras.filter(function (t) {
+    if (BOILERPLATE.some(function (re) { return re.test(t); })) return false;
+    if (t.length < 50 && !/[.!?…»"”)]$/.test(t)) return false;   // short fragments such as menu labels and captions
+    return true;
+  });
+}
+
 function extract(html, url) {
   var doc = new DOMParser().parseFromString(html, "text/html");
   var host = ""; try { host = new URL(url).hostname.replace(/^www\./, ""); } catch (e) {}
@@ -454,6 +553,7 @@ function extract(html, url) {
   var body = new DOMParser().parseFromString(art.content, "text/html");
   var paras = Array.prototype.map.call(body.querySelectorAll("p, blockquote"), function (n) { return n.textContent.replace(/\s+/g, " ").trim(); })
     .filter(function (t) { return t.length > 1; });
+  paras = cleanParas(paras);
 
   var author = authors.join(", ") || (art.byline || metaAuthor || "").replace(/^\s*(par|by)\s+/i, "").trim();
   var notes = [];
