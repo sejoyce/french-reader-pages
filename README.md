@@ -1,6 +1,6 @@
 # French News Reader
 
-Paste a link to a French news article and read it with likely B2/C1 words underlined. Hover (desktop) or tap (mobile) a word for its definition. The journalist, publication and a link to the original appear under the headline.
+POC for a future language learning app via real news articles. Paste a link to a French news article and read it with likely B2/C1 words underlined. Hover (desktop) or tap (mobile) a word for its definition. The journalist, publication and a link to the original appear under the headline.
 
 It runs entirely on free services and needs no API key:
 
