@@ -152,7 +152,7 @@ article p.body { font-size: 1.125rem; line-height: 1.75; margin: 0 0 1.1em; max-
 
   <p class="foot">
     Articles are fetched from the link you give and shown here for personal reading, with the journalist and publication credited under the headline. Paywalled pages only show what the site makes public.
-    Word levels are estimated from <a href="https://github.com/hermitdave/FrequencyWords" target="_blank" rel="noopener noreferrer">FrequencyWords</a> (CC BY-SA 4.0, from OpenSubtitles) and definitions come from <a href="https://en.wiktionary.org" target="_blank" rel="noopener noreferrer">Wiktionary</a> (CC BY-SA).
+    Word levels are estimated from <a href="https://github.com/hermitdave/FrequencyWords" target="_blank" rel="noopener noreferrer">FrequencyWords</a> (CC BY-SA 4.0, from OpenSubtitles) and definitions come from <a href="https://en.wiktionary.org" target="_blank" rel="noopener noreferrer">Wiktionary</a> (CC BY-SA).<span id="diag"></span>
   </p>
 </main>
 
@@ -192,6 +192,11 @@ var enReady = fetch("data/en_words.txt")
   })
   .catch(function () { en = null; });
 var rankReady = Promise.all([frReady, enReady]);
+rankReady.then(function () {
+  var d = document.getElementById("diag");
+  if (d) d.textContent = " Word lists: French " + (rank ? rank.size.toLocaleString("en-US") : 0) + ", English " +
+    (en ? en.size.toLocaleString("en-US") : "NOT FOUND (expected at data/en_words.txt)") + ". Page version 3.";
+});
 
 // ---------- Cognates (French words with a clear English twin) ----------
 // Words that look alike but mean something different are never hidden.
@@ -530,9 +535,16 @@ var BOILERPLATE = [
   /inscrivez-vous gratuitement/i, /connectez-vous/i, /d[ée]j[àa] abonn[ée]/i, /accepter et continuer/i,
   /^(se connecter|s['’]abonner|abonnez-vous|s['’]inscrire|inscrivez-vous|lire plus tard|partager|r[ée]utiliser ce contenu|ajouter aux favoris|offrir cet article|voir plus|lire la suite|lire aussi|lire également|à lire aussi|sur le même sujet|publicit[ée]|newsletter|contribuer)\b/i
 ];
+var LOGIN_WORDS = /(connectez-vous|se connecter|abonnez-vous|s['’]abonner|inscrivez-vous|s['’]inscrire|r[ée]serv[ée] aux abonn|cet article vous est offert|lecture (offerte|r[ée]serv)|newsletter)/i;
+function tidy(s) {
+  return String(s || "").normalize("NFKC").replace(/[​-‍⁠﻿­]/g, "").replace(/\s+/g, " ").trim();
+}
+function isBoilerplate(t) {
+  return BOILERPLATE.some(function (re) { return re.test(t); }) || (t.length < 200 && LOGIN_WORDS.test(t));
+}
 function cleanParas(paras) {
-  return paras.filter(function (t) {
-    if (BOILERPLATE.some(function (re) { return re.test(t); })) return false;
+  return paras.map(tidy).filter(function (t) {
+    if (isBoilerplate(t)) return false;
     if (t.length < 50 && !/[.!?…»"”)]$/.test(t)) return false;   // short fragments such as menu labels and captions
     return true;
   });
@@ -545,7 +557,8 @@ function extract(html, url) {
   var authors = jsonLdAuthors(doc);
   var metaAuthor = metaContent(doc, "author", "article:author");
   var lang = (doc.documentElement.getAttribute("lang") || metaContent(doc, "og:locale") || "").toLowerCase();
-  var dek = metaContent(doc, "og:description", "description");
+  var dek = tidy(metaContent(doc, "og:description", "description"));
+  if (isBoilerplate(dek)) dek = "";
   var h1 = doc.querySelector("h1");
 
   var art = new Readability(doc.cloneNode(true)).parse();
