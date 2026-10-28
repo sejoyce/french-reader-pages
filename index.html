@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>French News Reader</title>
+<style>
+/* Layout: one plain reading column on white; dotted bright underline marks B2/C1 vocabulary; a small black tooltip shows the definition. */
+:root {
+  --bg: #ffffff;
+  --fg: #111111;
+  --muted: #666666;
+  --rule: #dddddd;
+  --hl: #ff3d00;
+  --hl-soft: #fff0ea;
+  --err: #b00020;
+  --tip-bg: #111111;
+  --tip-fg: #ffffff;
+  --tip-dim: #bbbbbb;
+  --serif: Georgia, "Times New Roman", serif;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--serif);
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+main { max-width: 38rem; margin: 0 auto; min-width: 0; }
+
+.bar {
+  font-family: var(--sans);
+  font-size: 0.8125rem;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+.bar strong { color: var(--fg); font-weight: 600; }
+
+.legend { font-family: var(--sans); font-size: 0.875rem; line-height: 1.5; color: var(--muted); margin: 16px 0 0; }
+.mark, .w {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--hl);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+.mark { color: var(--fg); }
+
+form.load { margin-top: 16px; font-family: var(--sans); }
+form.load label { display: grid; gap: 4px; font-size: 0.8125rem; color: var(--muted); min-width: 0; }
+form.load .inline { display: flex; gap: 8px; }
+input[type="url"] {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid #999;
+  border-radius: 0;
+  padding: 8px 10px;
+}
+input:focus-visible { outline: 2px solid var(--fg); outline-offset: 1px; }
+button.btn {
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: var(--fg);
+  color: var(--bg);
+  border: 1px solid var(--fg);
+  border-radius: 0;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+button.btn.alt { background: var(--bg); color: var(--fg); }
+button.btn:disabled { opacity: 0.5; cursor: default; }
+button.btn:focus-visible { outline: 2px solid var(--hl); outline-offset: 2px; }
+#status { margin: 8px 0 0; min-height: 1.2em; font-size: 0.8125rem; color: var(--muted); }
+#status.err { color: var(--err); }
+
+.notice { font-family: var(--sans); font-size: 0.875rem; line-height: 1.5; border: 1px solid var(--rule); padding: 8px 12px; margin: 24px 0 0; }
+
+h1 { font-size: clamp(1.7rem, 5.5vw, 2.25rem); line-height: 1.15; font-weight: 700; margin: 32px 0 12px; text-wrap: balance; }
+.dek { font-size: 1.1875rem; line-height: 1.5; margin: 0 0 12px; }
+.byline { font-family: var(--sans); font-size: 0.8125rem; line-height: 1.5; color: var(--muted); margin: 0 0 28px; }
+.byline a { color: var(--fg); }
+article p.body { font-size: 1.125rem; line-height: 1.75; margin: 0 0 1.1em; max-width: 65ch; }
+
+.w { cursor: pointer; }
+.w:hover, .w.on { background: var(--hl-soft); }
+.w:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+#tip {
+  position: fixed; z-index: 20; top: 0; left: 0;
+  width: max-content;
+  max-width: min(19rem, calc(100vw - 32px));
+  background: var(--tip-bg);
+  color: var(--tip-fg);
+  font-family: var(--sans);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  padding: 10px 12px;
+  pointer-events: none;
+}
+#tip .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+#tip .lemma { font-weight: 700; font-size: 1rem; }
+#tip .pos { color: var(--tip-dim); font-style: italic; font-size: 0.8125rem; }
+#tip .lvl { margin-left: auto; font-size: 0.6875rem; letter-spacing: 0.06em; color: var(--hl); font-weight: 700; }
+#tip .from { color: var(--tip-dim); font-size: 0.8125rem; margin-top: 2px; }
+#tip ol { margin: 6px 0 0; padding-left: 1.2em; }
+#tip li + li { margin-top: 2px; }
+#tip .dim { color: var(--tip-dim); margin-top: 6px; }
+
+.foot { font-family: var(--sans); font-size: 0.8125rem; line-height: 1.5; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 12px; margin-top: 36px; }
+.foot a { color: var(--fg); }
+</style>
+</head>
+<body>
+<main>
+  <div class="bar">
+    <strong>French News Reader</strong>
+    <span id="mode">Sample article written for this prototype</span>
+  </div>
+
+  <p class="legend">
+    <span class="mark">Dotted underline</span> = likely B2/C1 vocabulary (<span id="count">0</span> words here).
+    Hover on desktop, or tap on mobile, to see the definition.
+  </p>
+
+  <form class="load" id="load">
+    <label for="f-url">Link to an article
+      <span class="inline">
+        <input type="url" id="f-url" autocomplete="off" placeholder="https://www.lemonde.fr/..." required>
+        <button type="submit" class="btn" id="go">Read</button>
+      </span>
+    </label>
+    <p id="status" role="status" aria-live="polite"></p>
+  </form>
+
+  <article id="article" lang="fr"></article>
+
+  <p class="foot">
+    Articles are fetched from the link you give and shown here for personal reading, with the journalist and publication credited under the headline. Paywalled pages only show what the site makes public.
+    Word levels are estimated from <a href="https://github.com/hermitdave/FrequencyWords" target="_blank" rel="noopener noreferrer">FrequencyWords</a> (CC BY-SA 4.0, from OpenSubtitles) and definitions come from <a href="https://en.wiktionary.org" target="_blank" rel="noopener noreferrer">Wiktionary</a> (CC BY-SA).
+  </p>
+</main>
+
+<div id="tip" role="tooltip" hidden></div>
+
+<script src="vendor/Readability.js"></script>
+<script src="config.js"></script>
+<script>
+(function () {
+"use strict";
+
+var $ = function (id) { return document.getElementById(id); };
+var root = $("article"), tip = $("tip"), statusEl = $("status"), modeEl = $("mode"), goBtn = $("go");
+
+// ---------- Word levels (estimated from frequency rank) ----------
+// Words ranked 1..KNOWN_MAX are treated as everyday vocabulary. Past that, B2 up to B2_MAX, then C1.
+var KNOWN_MAX = 9000, B2_MAX = 25000, MIN_LEN = 5;
+var rank = null; // Map word -> rank (1 = most frequent)
+var TOKEN = /aujourd['’]hui|\p{L}+(?:-\p{L}+)*/gu;
+
+var rankReady = fetch("data/fr_words.txt")
+  .then(function (r) { if (!r.ok) throw new Error("word list"); return r.text(); })
+  .then(function (t) {
+    rank = new Map();
+    t.split("\n").forEach(function (w, i) { w = w.trim(); if (w && !rank.has(w)) rank.set(w, i + 1); });
+  });
+
+function levelOf(token) {
+  if (token.length < MIN_LEN) return "";
+  var first = token.charAt(0);
+  if (first !== first.toLowerCase()) return "";          // capitalised: names, sentence starts
+  var w = token.toLowerCase().replace(/’/g, "'");
+  var r = rank.get(w);
+  if (r === undefined) {
+    if (token.indexOf("-") !== -1 || token.length < 6) return "";  // unknown hyphenated or short: skip
+    return "C1";
+  }
+  if (r <= KNOWN_MAX) return "";
+  return r <= B2_MAX ? "B2" : "C1";
+}
+
+// ---------- Rendering (DOM only, never innerHTML with article text) ----------
+var count = 0;
+function addText(parent, text) {
+  var last = 0, m;
+  TOKEN.lastIndex = 0;
+  while ((m = TOKEN.exec(text))) {
+    var lvl = rank ? levelOf(m[0]) : "";
+    if (!lvl) continue;
+    if (m.index > last) parent.appendChild(document.createTextNode(text.slice(last, m.index)));
+    var s = document.createElement("span");
+    s.className = "w"; s.tabIndex = 0; s.setAttribute("role", "button");
+    s.dataset.word = m[0]; s.dataset.lvl = lvl;
+    s.textContent = m[0];
+    parent.appendChild(s);
+    count++;
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)));
+}
+
+function el(tag, cls, text) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text) addText(e, text);
+  return e;
+}
+
+function safeUrl(u) {
+  try { var p = new URL(u); return (p.protocol === "https:" || p.protocol === "http:") ? p.href : ""; } catch (e) { return ""; }
+}
+
+function render(a) {
+  hideTip();
+  count = 0;
+  root.textContent = "";
+  if (a.notice) { var n = document.createElement("p"); n.className = "notice"; n.textContent = a.notice; root.appendChild(n); }
+  if (a.title) { var h = el("h1", "", a.title); root.appendChild(h); }
+  if (a.dek) root.appendChild(el("p", "dek", a.dek));
+
+  var by = document.createElement("p");
+  by.className = "byline";
+  var parts = [];
+  if (a.credit) parts.push(document.createTextNode(a.credit));
+  else {
+    if (a.author) parts.push(document.createTextNode("Par " + a.author));
+    if (a.source) parts.push(document.createTextNode(a.source));
+    var link = a.url ? safeUrl(a.url) : "";
+    if (link) {
+      var A = document.createElement("a");
+      A.href = link; A.target = "_blank"; A.rel = "noopener noreferrer"; A.textContent = "Read the original";
+      parts.push(A);
+    }
+  }
+  parts.forEach(function (p, i) { if (i) by.appendChild(document.createTextNode(" · ")); by.appendChild(p); });
+  if (parts.length) root.appendChild(by);
+
+  a.paras.forEach(function (p) { root.appendChild(el("p", "body", p)); });
+  $("count").textContent = count;
+}
+
+var SAMPLE = {
+  title: "Dans les Alpes, les stations de ski misent sur l’été pour survivre au réchauffement",
+  dek: "Faute d’un enneigement suffisant, plusieurs communes de montagne repensent leur modèle économique et peinent à convaincre leurs habitants.",
+  credit: "Texte d’exemple · Société",
+  paras: [
+    "Depuis trois hivers, le constat est sans appel : la neige se fait de plus en plus rare à basse altitude. À Saint-Aubin-des-Cimes, petite station de Haute-Savoie, la moitié des remontées mécaniques est restée à l’arrêt durant la dernière saison. Le maire, Étienne Marchand, reconnaît que la commune a longtemps sous-estimé l’ampleur du phénomène.",
+    "« Nous avons trop tardé à diversifier notre offre », admet-il. Le conseil municipal a donc approuvé un plan de reconversion qui prévoit l’aménagement de sentiers de randonnée, d’un parc d’accrobranche et d’un centre de bien-être. Les premiers travaux devraient s’achèver d’ici l’an prochain, à condition que les subventions promises par la région soient bel et bien versées.",
+    "Ce virage ne fait pas l’unanimité. Certains commerçants redoutent que la clientèle estivale, moins dépensière, ne compense jamais le manque à gagner de l’hiver. D’autres reprochent aux élus d’avoir ignoré trop longtemps les alertes des scientifiques. « On nous a rassurés pendant des années, alors que les chiffres étaient inquiétants », déplore une hôtelière.",
+    "Reste une inconnue de taille : l’attitude des touristes eux-mêmes. Selon une enquête menée auprès de 2 000 visiteurs, une majorité se dit prête à venir en été, mais seulement si les prix demeurent abordables. Pour les élus, l’enjeu est désormais de préserver l’équilibre fragile entre attractivité et respect de l’environnement."
+  ]
+};
+
+rankReady.then(function () { render(SAMPLE); }).catch(function () {
+  render(SAMPLE);
+  setStatus("The word list did not load, so no words are underlined.", true);
+});
+
+// ---------- Definitions from Wiktionary ----------
+var defCache = new Map();
+
+function plain(html) {
+  var d = new DOMParser().parseFromString(html || "", "text/html");
+  d.querySelectorAll("ul, ol, dl, style, sup").forEach(function (n) { n.remove() });
+  return (d.body.textContent || "").replace(/\s+/g, " ").trim();
+}
+
+function wikt(term) {
+  return fetch("https://en.wiktionary.org/api/rest_v1/page/definition/" + encodeURIComponent(term), { headers: { accept: "application/json" } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; });
+}
+
+function formOfLemma(html) {
+  // Inflected forms read like "third-person plural present of <a title=\"redouter\">redouter</a>".
+  var d = new DOMParser().parseFromString(html || "", "text/html");
+  var inner = d.querySelector(".form-of-definition");
+  if (!inner) return "";
+  var links = inner.querySelectorAll("a[title]");
+  return links.length ? links[links.length - 1].getAttribute("title") : "";
+}
+
+function pickDefs(entries, max) {
+  var out = [];
+  (entries || []).forEach(function (e) {
+    (e.definitions || []).forEach(function (d) {
+      var t = plain(d.definition);
+      if (t && out.length < max) out.push({ pos: e.partOfSpeech || "", text: t });
+    });
+  });
+  return out;
+}
+
+function lookup(word) {
+  var key = word.toLowerCase().replace(/’/g, "'");
+  if (defCache.has(key)) return defCache.get(key);
+  var p = wikt(key).then(function (data) {
+    var fr = data && data.fr;
+    if (!fr || !fr.length) return { none: true };
+    var firstHtml = fr[0].definitions && fr[0].definitions[0] && fr[0].definitions[0].definition;
+    var lemma = formOfLemma(firstHtml);
+    if (lemma && lemma.toLowerCase() !== key) {
+      return wikt(lemma).then(function (d2) {
+        var defs = d2 && d2.fr ? pickDefs(d2.fr, 3) : [];
+        return { lemma: lemma, form: plain(firstHtml), defs: defs, pos: defs[0] ? defs[0].pos : "" };
+      });
+    }
+    var defs = pickDefs(fr, 3);
+    return { lemma: key, defs: defs, pos: defs[0] ? defs[0].pos : "" };
+  });
+  defCache.set(key, p);
+  return p;
+}
+
+// ---------- Tooltip ----------
+var current = null, pinned = false, shownFor = null;
+
+function pickRect(e, ev) {
+  var rects = e.getClientRects();
+  if (ev && typeof ev.clientY === "number" && rects.length > 1) {
+    for (var i = 0; i < rects.length; i++) if (ev.clientY >= rects[i].top - 2 && ev.clientY <= rects[i].bottom + 2) return rects[i];
+  }
+  return rects[0] || e.getBoundingClientRect();
+}
+
+function place(e, ev) {
+  var r = pickRect(e, ev), w = tip.offsetWidth, h = tip.offsetHeight;
+  var left = Math.max(8, Math.min(r.left, window.innerWidth - w - 8));
+  var top = r.bottom + 8;
+  if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 8);
+  tip.style.left = left + "px";
+  tip.style.top = top + "px";
+}
+
+function head(lemma, pos, lvl) {
+  var h = document.createElement("div"); h.className = "head";
+  var a = document.createElement("span"); a.className = "lemma"; a.textContent = lemma; h.appendChild(a);
+  if (pos) { var b = document.createElement("span"); b.className = "pos"; b.textContent = pos; h.appendChild(b); }
+  var c = document.createElement("span"); c.className = "lvl"; c.textContent = lvl; h.appendChild(c);
+  return h;
+}
+
+function fillTip(word, lvl, info) {
+  tip.textContent = "";
+  if (!info) { tip.appendChild(head(word, "", lvl)); tip.appendChild(note("Loading definition…")); return; }
+  if (info.none || !info.defs.length) {
+    tip.appendChild(head(word, "", lvl));
+    tip.appendChild(note("No definition found for this form."));
+    return;
+  }
+  tip.appendChild(head(info.lemma, info.pos, lvl));
+  if (info.form) { var f = document.createElement("div"); f.className = "from"; f.textContent = word + ": " + info.form; tip.appendChild(f); }
+  var ol = document.createElement("ol");
+  info.defs.forEach(function (d) { var li = document.createElement("li"); li.textContent = d.text; ol.appendChild(li); });
+  tip.appendChild(ol);
+}
+function note(t) { var d = document.createElement("div"); d.className = "dim"; d.textContent = t; return d; }
+
+function showTip(e, ev) {
+  var word = e.dataset.word, lvl = e.dataset.lvl;
+  if (current && current !== e) { current.classList.remove("on"); current.removeAttribute("aria-describedby"); }
+  current = e; shownFor = word;
+  e.classList.add("on"); e.setAttribute("aria-describedby", "tip");
+  fillTip(word, lvl, null);
+  tip.hidden = false;
+  place(e, ev);
+  lookup(word).then(function (info) {
+    if (current !== e) return;
+    fillTip(word, lvl, info);
+    place(e, ev);
+  });
+}
+
+function hideTip() {
+  tip.hidden = true; pinned = false;
+  if (current) { current.classList.remove("on"); current.removeAttribute("aria-describedby"); }
+  current = null;
+}
+
+function wordFrom(t) { return t && t.closest ? t.closest(".w") : null; }
+
+root.addEventListener("pointerover", function (e) { if (e.pointerType !== "mouse") return; var w = wordFrom(e.target); if (w && !pinned) showTip(w, e); });
+root.addEventListener("pointerout", function (e) { if (e.pointerType !== "mouse") return; var w = wordFrom(e.target); if (w && !pinned && !w.contains(e.relatedTarget)) hideTip(); });
+root.addEventListener("focusin", function (e) { var w = wordFrom(e.target); if (w && !pinned) showTip(w); });
+root.addEventListener("focusout", function (e) { if (!pinned && wordFrom(e.target)) hideTip(); });
+root.addEventListener("click", function (e) {
+  var w = wordFrom(e.target); if (!w) return;
+  e.stopPropagation();
+  if (current === w && pinned) { hideTip(); return; }
+  pinned = true; showTip(w, e);
+});
+root.addEventListener("keydown", function (e) { var w = wordFrom(e.target); if (w && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); w.click(); } });
+document.addEventListener("click", function (e) { if (!wordFrom(e.target)) hideTip(); });
+document.addEventListener("keydown", function (e) { if (e.key === "Escape") hideTip(); });
+window.addEventListener("scroll", function () { if (current) hideTip(); }, { passive: true });
+window.addEventListener("resize", function () { if (current) hideTip(); });
+
+// ---------- Load an article from a link (through your Cloudflare proxy) ----------
+function setStatus(msg, isErr) { statusEl.textContent = msg || ""; statusEl.className = isErr ? "err" : ""; }
+
+function metaContent(doc) {
+  for (var i = 1; i < arguments.length; i++) {
+    var n = arguments[i];
+    var m = doc.querySelector('meta[property="' + n + '"], meta[name="' + n + '"]');
+    var v = m && m.getAttribute("content");
+    if (v && v.trim()) return v.trim();
+  }
+  return "";
+}
+
+function jsonLdAuthors(doc) {
+  var out = [];
+  doc.querySelectorAll('script[type="application/ld+json"]').forEach(function (s) {
+    try {
+      var data = JSON.parse(s.textContent);
+      var nodes = Array.isArray(data) ? data : (data["@graph"] || [data]);
+      nodes.forEach(function (n) {
+        var a = n && n.author; if (!a) return;
+        (Array.isArray(a) ? a : [a]).forEach(function (x) {
+          var name = typeof x === "string" ? x : x && x.name;
+          if (name && out.indexOf(name) === -1) out.push(name);
+        });
+      });
+    } catch (e) { /* ignore malformed JSON-LD */ }
+  });
+  return out;
+}
+
+function extract(html, url) {
+  var doc = new DOMParser().parseFromString(html, "text/html");
+  var host = ""; try { host = new URL(url).hostname.replace(/^www\./, ""); } catch (e) {}
+  var source = metaContent(doc, "og:site_name") || host;
+  var authors = jsonLdAuthors(doc);
+  var metaAuthor = metaContent(doc, "author", "article:author");
+  var lang = (doc.documentElement.getAttribute("lang") || metaContent(doc, "og:locale") || "").toLowerCase();
+  var dek = metaContent(doc, "og:description", "description");
+  var h1 = doc.querySelector("h1");
+
+  var art = new Readability(doc.cloneNode(true)).parse();
+  if (!art) throw new Error("Could not find an article on that page.");
+  var body = new DOMParser().parseFromString(art.content, "text/html");
+  var paras = Array.prototype.map.call(body.querySelectorAll("p, blockquote"), function (n) { return n.textContent.replace(/\s+/g, " ").trim(); })
+    .filter(function (t) { return t.length > 1; });
+
+  var author = authors.join(", ") || (art.byline || metaAuthor || "").replace(/^\s*(par|by)\s+/i, "").trim();
+  var notes = [];
+  if (lang && lang.indexOf("fr") !== 0) notes.push("This page does not look like it is in French.");
+  if (paras.join(" ").length < 900) notes.push("Only a short text came back. The article may be behind a paywall or login.");
+
+  return {
+    title: metaContent(doc, "og:title") || (h1 && h1.textContent.replace(/\s+/g, " ").trim()) || art.title,
+    author: author, source: source, url: url, dek: dek, paras: paras, notice: notes.join(" ")
+  };
+}
+
+$("load").addEventListener("submit", function (ev) {
+  ev.preventDefault();
+  var url = $("f-url").value.trim();
+  var proxy = (window.FRENCH_READER && window.FRENCH_READER.proxyUrl || "").replace(/\/+$/, "");
+  if (!proxy) { setStatus("Link loading is not set up yet. Add your proxy address to config.js (see the README).", true); return; }
+  goBtn.disabled = true;
+  setStatus("Fetching the article…");
+  var finalUrl = url;
+  fetch(proxy + "/?url=" + encodeURIComponent(url))
+    .then(function (r) {
+      finalUrl = r.headers.get("x-final-url") || url;
+      if (!r.ok) return r.text().then(function (t) { throw new Error(t || "Could not fetch that page."); });
+      return r.text();
+    })
+    .then(function (html) { return rankReady.then(function () { return extract(html, finalUrl); }); })
+    .then(function (a) {
+      if (!a.paras.length) throw new Error("No readable text was found on that page.");
+      modeEl.textContent = "Reading: " + a.source;
+      render(a);
+      setStatus("");
+      window.scrollTo({ top: Math.max(0, root.getBoundingClientRect().top + window.scrollY - 16), behavior: "smooth" });
+    })
+    .catch(function (e) { setStatus(e && e.message ? e.message : "Something went wrong.", true); })
+    .then(function () { goBtn.disabled = false; });
+});
+
+})();
+</script>
+</body>
+</html>
