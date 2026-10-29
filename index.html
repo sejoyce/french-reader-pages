@@ -195,7 +195,7 @@ var rankReady = Promise.all([frReady, enReady]);
 rankReady.then(function () {
   var d = document.getElementById("diag");
   if (d) d.textContent = " Word lists: French " + (rank ? rank.size.toLocaleString("en-US") : 0) + ", English " +
-    (en ? en.size.toLocaleString("en-US") : "NOT FOUND (expected at data/en_words.txt)") + ". Page version 4.";
+    (en ? en.size.toLocaleString("en-US") : "NOT FOUND (expected at data/en_words.txt)") + ". Page version 5.";
 });
 
 // ---------- Cognates (French words with a clear English twin) ----------
@@ -369,28 +369,32 @@ function wikt(term) {
     .catch(function () { return null; });
 }
 
-var FORM_KEYS = /(participle|inflection|person|plural|feminine|masculine|singular|subjunctive|indicative|imperative|conditional|gerund|spelling|alternative form)/i;
+var FORM_START = /^\s*(?:\([^)]*\)\s*)?(?:(?:first|second|third)-person|singular|plural|masculine|feminine|neuter|present|past|future|imperfect|simple|compound|conditional|subjunctive|indicative|imperative|participle|gerund|inflection|alternative|obsolete|nonstandard|dated|archaic|rare|superseded|elongated)\b/i;
 var NOISE_TITLE = /^(Appendix:|Wiktionary:|Template:|Category:|Special:|w:|wikipedia:)/i;
 var VERB_FORM = /(participle|person|subjunctive|indicative|imperative|conditional|gerund)/i;
 
-// Reads one Wiktionary definition. If it only says "<grammar> of <other word>", returns that other word as lemma.
+// Reads one Wiktionary definition. If it only says "<grammar> of <other word>", returns the candidate base words.
 function parseDef(html) {
   var d = new DOMParser().parseFromString(html || "", "text/html");
   d.querySelectorAll("ul, ol, dl, style, sup").forEach(function (n) { n.remove(); });
   var text = (d.body.textContent || "").replace(/\s+/g, " ").trim();
   var marked = d.querySelector(".form-of-definition, .form-of-definition-link");
-  var looksForm = text.length < 160 && FORM_KEYS.test(text) && /\bof\s+\S+\.?$/.test(text);
-  var lemma = "";
+  var looksForm = text.length < 160 && FORM_START.test(text) && /\bof\s+\S+\.?$/.test(text);
+  var cands = [];
   if (marked || looksForm) {
     var scope = d.querySelector(".form-of-definition") || d.body;
-    var links = Array.prototype.filter.call(scope.querySelectorAll("a[title]"), function (a) {
-      return !NOISE_TITLE.test(a.getAttribute("title")) && !/Appendix|Glossary/i.test(a.getAttribute("href") || "");
+    var links = Array.prototype.filter.call(scope.querySelectorAll("a"), function (a) {
+      var t = a.getAttribute("title") || a.textContent || "";
+      return t && !NOISE_TITLE.test(t) && !/Appendix|Glossary/i.test(a.getAttribute("href") || "");
     });
-    if (links.length) lemma = links[links.length - 1].getAttribute("title");
-    else { var m = /\bof\s+(\S+?)\.?$/.exec(text); if (m) lemma = m[1]; }
-    lemma = lemma.replace(/#.*$/, "").trim();
+    for (var i = links.length - 1; i >= 0; i--) {
+      var t = (links[i].getAttribute("title") || links[i].textContent || "").replace(/#.*$/, "").trim();
+      if (t && cands.indexOf(t) === -1) cands.push(t);
+    }
+    var m = /\bof\s+(\S+?)[.,;]?$/.exec(text);
+    if (m && cands.indexOf(m[1]) === -1) cands.push(m[1]);
   }
-  return { text: text, lemma: lemma };
+  return { text: text, cands: cands, isForm: cands.length > 0 };
 }
 
 // Real definitions only: skips lines that just point to another word.
@@ -399,10 +403,56 @@ function pickDefs(entries, max) {
   (entries || []).forEach(function (e) {
     (e.definitions || []).forEach(function (d) {
       var x = parseDef(d.definition);
-      if (x.text && !x.lemma && out.length < max) out.push({ pos: e.partOfSpeech || "", text: x.text });
+      if (x.text && !x.isForm && out.length < max) out.push({ pos: e.partOfSpeech || "", text: x.text });
     });
   });
   return out;
+}
+
+// Last-resort guesses at the infinitive from the ending of an inflected form.
+function guessLemmas(w) {
+  var ends = [["ées","er"],["ée","er"],["és","er"],["é","er"],["ent","er"],["es","er"],["e","er"],["ons","er"],["ez","er"],["ant","er"],
+              ["issent","ir"],["issant","ir"],["ies","ir"],["ie","ir"],["is","ir"],["i","ir"]];
+  var out = [];
+  ends.forEach(function (p) {
+    if (w.length > p[0].length + 2 && w.slice(-p[0].length) === p[0]) out.push(w.slice(0, -p[0].length) + p[1]);
+  });
+  return out;
+}
+
+function wiktFr(term) {
+  return fetch("https://fr.wiktionary.org/api/rest_v1/page/definition/" + encodeURIComponent(term), { headers: { accept: "application/json" } })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .catch(function () { return null; });
+}
+
+// Try each candidate base word until one gives real definitions (English Wiktionary first, French Wiktionary as a fallback).
+function baseDefinitions(cands, verbish) {
+  var seen = {}, list = [];
+  cands.forEach(function (c) { var k = c.toLowerCase(); if (k && !seen[k]) { seen[k] = 1; list.push(c); } });
+  list = list.slice(0, 5);
+  function pick(entries) {
+    if (verbish) {
+      var v = entries.filter(function (e) { return /verb|verbe/i.test(e.partOfSpeech || ""); });
+      if (v.length) entries = v;
+    }
+    return pickDefs(entries, 3);
+  }
+  function en(i) {
+    if (i >= list.length) return Promise.resolve(null);
+    return wikt(list[i]).then(function (d2) {
+      var defs = pick((d2 && d2.fr) || []);
+      return defs.length ? { lemma: list[i], defs: defs } : en(i + 1);
+    });
+  }
+  function fr(i) {
+    if (i >= Math.min(list.length, 2)) return Promise.resolve(null);
+    return wiktFr(list[i]).then(function (d2) {
+      var defs = pick((d2 && d2.fr) || []);
+      return defs.length ? { lemma: list[i], defs: defs.map(function (x) { return { pos: x.pos, text: x.text + " (in French)" }; }) } : fr(i + 1);
+    });
+  }
+  return en(0).then(function (r) { return r || fr(0); });
 }
 
 function lookup(word) {
@@ -416,23 +466,18 @@ function lookup(word) {
       (e.definitions || []).forEach(function (d) {
         var x = parseDef(d.definition);
         if (!x.text) return;
-        if (x.lemma && x.lemma.toLowerCase() !== key) forms.push({ text: x.text, lemma: x.lemma });
-        else if (!x.lemma) own.push({ pos: e.partOfSpeech || "", text: x.text });
+        if (x.isForm) forms.push(x); else own.push({ pos: e.partOfSpeech || "", text: x.text });
       });
     });
     if (!forms.length) return { lemma: key, defs: own.slice(0, 3), pos: own[0] ? own[0].pos : "" };
 
     // An inflected form (for example a past participle): show the base word's real definitions.
     var base = forms[0];
-    return wikt(base.lemma).then(function (d2) {
-      var entries = (d2 && d2.fr) || [];
-      if (VERB_FORM.test(base.text)) {
-        var verbs = entries.filter(function (e) { return /verb/i.test(e.partOfSpeech || ""); });
-        if (verbs.length) entries = verbs;
-      }
-      var baseDefs = pickDefs(entries, 3);
-      var defs = own.slice(0, 2).concat(baseDefs).slice(0, 4);
-      return { lemma: base.lemma, form: base.text, defs: defs, pos: baseDefs[0] ? baseDefs[0].pos : (own[0] ? own[0].pos : "") };
+    var cands = base.cands.filter(function (c) { return c.toLowerCase() !== key; }).concat(guessLemmas(key));
+    return baseDefinitions(cands, VERB_FORM.test(base.text)).then(function (got) {
+      if (!got) return { lemma: cands[0] || key, form: base.text, defs: own.slice(0, 3), pos: own[0] ? own[0].pos : "", missing: true };
+      var defs = own.slice(0, 2).concat(got.defs).slice(0, 4);
+      return { lemma: got.lemma, form: base.text, defs: defs, pos: got.defs[0] ? got.defs[0].pos : "" };
     });
   });
   defCache.set(key, p);
@@ -471,8 +516,13 @@ function fillTip(word, lvl, info) {
   tip.textContent = "";
   if (!info) { tip.appendChild(head(word, "", lvl)); tip.appendChild(note("Loading definition…")); return; }
   if (info.none || !info.defs.length) {
-    tip.appendChild(head(word, "", lvl));
-    tip.appendChild(note("No definition found for this form."));
+    tip.appendChild(head(info.lemma && info.form ? info.lemma : word, "", lvl));
+    if (info.form) {
+      var ff = document.createElement("div"); ff.className = "from"; ff.textContent = word + ": " + info.form; tip.appendChild(ff);
+      tip.appendChild(note("No definition found for \u201c" + info.lemma + "\u201d on Wiktionary."));
+    } else {
+      tip.appendChild(note("No definition found for this form."));
+    }
     return;
   }
   tip.appendChild(head(info.lemma, info.pos, lvl));
