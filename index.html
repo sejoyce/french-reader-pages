@@ -195,7 +195,7 @@ var rankReady = Promise.all([frReady, enReady]);
 rankReady.then(function () {
   var d = document.getElementById("diag");
   if (d) d.textContent = " Word lists: French " + (rank ? rank.size.toLocaleString("en-US") : 0) + ", English " +
-    (en ? en.size.toLocaleString("en-US") : "NOT FOUND (expected at data/en_words.txt)") + ". Page version 5.";
+    (en ? en.size.toLocaleString("en-US") : "NOT FOUND (expected at data/en_words.txt)") + ". Page version 6.";
 });
 
 // ---------- Cognates (French words with a clear English twin) ----------
@@ -412,7 +412,8 @@ function pickDefs(entries, max) {
 // Last-resort guesses at the infinitive from the ending of an inflected form.
 function guessLemmas(w) {
   var ends = [["ées","er"],["ée","er"],["és","er"],["é","er"],["ent","er"],["es","er"],["e","er"],["ons","er"],["ez","er"],["ant","er"],
-              ["issent","ir"],["issant","ir"],["ies","ir"],["ie","ir"],["is","ir"],["i","ir"]];
+              ["issent","ir"],["issant","ir"],["ies","ir"],["ie","ir"],["is","ir"],["i","ir"],
+              ["ues","re"],["ue","re"],["us","re"],["u","re"],["ites","ire"],["ite","ire"],["its","ire"],["it","ire"]];
   var out = [];
   ends.forEach(function (p) {
     if (w.length > p[0].length + 2 && w.slice(-p[0].length) === p[0]) out.push(w.slice(0, -p[0].length) + p[1]);
@@ -426,11 +427,10 @@ function wiktFr(term) {
     .catch(function () { return null; });
 }
 
-// Try each candidate base word until one gives real definitions (English Wiktionary first, French Wiktionary as a fallback).
+// Try each candidate base word until one gives real definitions. When a page only points to yet another
+// word (feminine -> masculine participle -> infinitive), follow that pointer too.
 function baseDefinitions(cands, verbish) {
-  var seen = {}, list = [];
-  cands.forEach(function (c) { var k = c.toLowerCase(); if (k && !seen[k]) { seen[k] = 1; list.push(c); } });
-  list = list.slice(0, 5);
+  var visited = {}, budget = 8;
   function pick(entries) {
     if (verbish) {
       var v = entries.filter(function (e) { return /verb|verbe/i.test(e.partOfSpeech || ""); });
@@ -438,21 +438,33 @@ function baseDefinitions(cands, verbish) {
     }
     return pickDefs(entries, 3);
   }
-  function en(i) {
-    if (i >= list.length) return Promise.resolve(null);
-    return wikt(list[i]).then(function (d2) {
-      var defs = pick((d2 && d2.fr) || []);
-      return defs.length ? { lemma: list[i], defs: defs } : en(i + 1);
+  function next(queue) {
+    while (queue.length && visited[queue[0].toLowerCase()]) queue.shift();
+    if (!queue.length || budget <= 0) return Promise.resolve(null);
+    var c = queue.shift();
+    visited[c.toLowerCase()] = 1; budget--;
+    return wikt(c).then(function (d2) {
+      var entries = (d2 && d2.fr) || [];
+      var defs = pick(entries);
+      if (defs.length) return { lemma: c, defs: defs };
+      var deeper = [];
+      entries.forEach(function (e) {
+        (e.definitions || []).forEach(function (d) {
+          var x = parseDef(d.definition);
+          if (x.isForm) x.cands.forEach(function (y) { deeper.push(y); });
+        });
+      });
+      return next(deeper.concat(queue));
     });
   }
-  function fr(i) {
-    if (i >= Math.min(list.length, 2)) return Promise.resolve(null);
-    return wiktFr(list[i]).then(function (d2) {
+  function frFallback(i) {
+    if (i >= Math.min(cands.length, 2)) return Promise.resolve(null);
+    return wiktFr(cands[i]).then(function (d2) {
       var defs = pick((d2 && d2.fr) || []);
-      return defs.length ? { lemma: list[i], defs: defs.map(function (x) { return { pos: x.pos, text: x.text + " (in French)" }; }) } : fr(i + 1);
+      return defs.length ? { lemma: cands[i], defs: defs.map(function (x) { return { pos: x.pos, text: x.text + " (in French)" }; }) } : frFallback(i + 1);
     });
   }
-  return en(0).then(function (r) { return r || fr(0); });
+  return next(cands.slice()).then(function (r) { return r || frFallback(0); });
 }
 
 function lookup(word) {
