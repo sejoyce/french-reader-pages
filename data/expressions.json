@@ -1,0 +1,924 @@
+[
+{
+"p": "à l'instar de",
+"d": "like, in the same way as",
+"l": "C1"
+},
+{
+"p": "au détriment de",
+"d": "at the expense of",
+"l": "B2"
+},
+{
+"p": "dans le cadre de",
+"d": "as part of, within the framework of",
+"l": "B2"
+},
+{
+"p": "en l'occurrence",
+"d": "in this case, here",
+"l": "C1"
+},
+{
+"p": "à l'issue de",
+"d": "at the end of, following",
+"l": "C1"
+},
+{
+"p": "sur fond de",
+"d": "against a backdrop of",
+"l": "C1"
+},
+{
+"p": "en toile de fond",
+"d": "as a backdrop",
+"l": "C1"
+},
+{
+"p": "en passe de",
+"d": "about to, on the verge of",
+"l": "C1"
+},
+{
+"p": "pour autant",
+"d": "even so, for all that",
+"l": "C1"
+},
+{
+"p": "de surcroît",
+"d": "moreover, on top of that",
+"l": "C1"
+},
+{
+"p": "au demeurant",
+"d": "moreover, for that matter",
+"l": "C1"
+},
+{
+"p": "d'ores et déjà",
+"d": "already, as of now",
+"l": "C1"
+},
+{
+"p": "bel et bien",
+"d": "really, without a doubt",
+"l": "C1"
+},
+{
+"p": "tant bien que mal",
+"d": "somehow, after a fashion",
+"l": "C1"
+},
+{
+"p": "à tout prix",
+"d": "at all costs",
+"l": "B2"
+},
+{
+"p": "coûte que coûte",
+"d": "at all costs, whatever it takes",
+"l": "C1"
+},
+{
+"p": "vaille que vaille",
+"d": "somehow, come what may",
+"l": "C1"
+},
+{
+"p": "en dépit de",
+"d": "despite",
+"l": "B2"
+},
+{
+"p": "au profit de",
+"d": "for the benefit of",
+"l": "B2"
+},
+{
+"p": "à l'égard de",
+"d": "towards, regarding",
+"l": "C1"
+},
+{
+"p": "à cet égard",
+"d": "in this respect",
+"l": "C1"
+},
+{
+"p": "en raison de",
+"d": "because of, due to",
+"l": "B2"
+},
+{
+"p": "à la suite de",
+"d": "following, as a result of",
+"l": "B2"
+},
+{
+"p": "en vertu de",
+"d": "by virtue of, under (a law)",
+"l": "C1"
+},
+{
+"p": "à hauteur de",
+"d": "up to the amount of",
+"l": "C1"
+},
+{
+"p": "en matière de",
+"d": "regarding, in the area of",
+"l": "B2"
+},
+{
+"p": "au titre de",
+"d": "under, in respect of, as",
+"l": "C1"
+},
+{
+"p": "aux dépens de",
+"d": "at the expense of",
+"l": "C1"
+},
+{
+"p": "à l'encontre de",
+"d": "against, contrary to",
+"l": "C1"
+},
+{
+"p": "en faveur de",
+"d": "in favor of",
+"l": "B2"
+},
+{
+"p": "de concert avec",
+"d": "in concert with, together with",
+"l": "C1"
+},
+{
+"p": "à l'échelle de",
+"d": "on the scale of",
+"l": "B2"
+},
+{
+"p": "à grande échelle",
+"d": "on a large scale",
+"l": "B2"
+},
+{
+"p": "au-delà de",
+"d": "beyond, over and above",
+"l": "B2"
+},
+{
+"p": "faute de",
+"d": "for lack of, in the absence of",
+"l": "C1"
+},
+{
+"p": "quitte à",
+"d": "even if it means, at the risk of",
+"l": "C1"
+},
+{
+"p": "à moins que",
+"d": "unless",
+"l": "B2"
+},
+{
+"p": "à moins de",
+"d": "unless, short of",
+"l": "B2"
+},
+{
+"p": "de peur que",
+"d": "for fear that",
+"l": "C1"
+},
+{
+"p": "de peur de",
+"d": "for fear of",
+"l": "C1"
+},
+{
+"p": "en dehors de",
+"d": "apart from, outside of",
+"l": "B2"
+},
+{
+"p": "par le biais de",
+"d": "by means of, through",
+"l": "C1"
+},
+{
+"p": "au gré de",
+"d": "according to the whims of, depending on",
+"l": "C1"
+},
+{
+"p": "à l'abri de",
+"d": "sheltered from, safe from",
+"l": "B2"
+},
+{
+"p": "au péril de",
+"d": "at the risk of (one's life)",
+"l": "C1"
+},
+{
+"p": "sous réserve de",
+"d": "subject to",
+"l": "C1"
+},
+{
+"p": "en guise de",
+"d": "by way of, as",
+"l": "C1"
+},
+{
+"p": "de manière à",
+"d": "so as to",
+"l": "B2"
+},
+{
+"p": "de façon à",
+"d": "so as to",
+"l": "B2"
+},
+{
+"p": "à condition de",
+"d": "provided that one",
+"l": "B2"
+},
+{
+"p": "à condition que",
+"d": "provided that (takes the subjunctive)",
+"l": "B2"
+},
+{
+"p": "à ce titre",
+"d": "as such, in that capacity",
+"l": "C1"
+},
+{
+"p": "en tout état de cause",
+"d": "in any case, whatever happens",
+"l": "C1"
+},
+{
+"p": "dans la foulée",
+"d": "immediately afterwards, in the wake of it",
+"l": "C1"
+},
+{
+"p": "de fond en comble",
+"d": "from top to bottom, completely",
+"l": "C1"
+},
+{
+"p": "en filigrane",
+"d": "between the lines, implicitly",
+"l": "C1"
+},
+{
+"p": "par ailleurs",
+"d": "moreover, besides",
+"l": "B2"
+},
+{
+"p": "en revanche",
+"d": "on the other hand",
+"l": "B2"
+},
+{
+"p": "au fil de",
+"d": "over the course of, as time goes by",
+"l": "C1"
+},
+{
+"p": "d'autant que",
+"d": "especially since",
+"l": "C1"
+},
+{
+"p": "d'autant plus que",
+"d": "all the more so since",
+"l": "B2"
+},
+{
+"p": "à plus forte raison",
+"d": "all the more so",
+"l": "C1"
+},
+{
+"p": "sans doute",
+"d": "probably (not 'without doubt')",
+"l": "B2"
+},
+{
+"p": "en tout cas",
+"d": "in any case",
+"l": "B2"
+},
+{
+"p": "tout au plus",
+"d": "at most, at best",
+"l": "C1"
+},
+{
+"p": "à tour de rôle",
+"d": "in turn, taking turns",
+"l": "C1"
+},
+{
+"p": "tôt ou tard",
+"d": "sooner or later",
+"l": "B2"
+},
+{
+"p": "mine de rien",
+"d": "casually, as if it were nothing",
+"l": "C1"
+},
+{
+"p": "au pied de la lettre",
+"d": "literally, to the letter",
+"l": "C1"
+},
+{
+"p": "à bout de souffle",
+"d": "out of steam, exhausted",
+"l": "C1"
+},
+{
+"p": "à l'unanimité",
+"d": "unanimously",
+"l": "B2"
+},
+{
+"p": "à huis clos",
+"d": "behind closed doors",
+"l": "C1"
+},
+{
+"p": "de plein fouet",
+"d": "head-on",
+"l": "C1"
+},
+{
+"p": "en ligne de mire",
+"d": "in one's sights, as a target",
+"l": "C1"
+},
+{
+"p": "en première ligne",
+"d": "on the front line",
+"l": "C1"
+},
+{
+"p": "au cœur de",
+"d": "at the heart of",
+"l": "B2"
+},
+{
+"p": "de plus belle",
+"d": "even harder, with renewed vigor",
+"l": "C1"
+},
+{
+"p": "bon gré mal gré",
+"d": "willing or not, one way or another",
+"l": "C1"
+},
+{
+"p": "le cas échéant",
+"d": "if need be, where applicable",
+"l": "C1"
+},
+{
+"p": "à terme",
+"d": "in the long run, eventually",
+"l": "C1"
+},
+{
+"p": "dans l'immédiat",
+"d": "for the time being, for now",
+"l": "B2"
+},
+{
+"p": "à ce jour",
+"d": "to date, so far",
+"l": "B2"
+},
+{
+"p": "à ce stade",
+"d": "at this stage",
+"l": "B2"
+},
+{
+"p": "en l'état",
+"d": "as it stands, in its current state",
+"l": "C1"
+},
+{
+"p": "au plus tard",
+"d": "at the latest",
+"l": "B2"
+},
+{
+"p": "en outre",
+"d": "furthermore, in addition",
+"l": "C1"
+},
+{
+"p": "de ce fait",
+"d": "as a result, therefore",
+"l": "B2"
+},
+{
+"p": "dès lors que",
+"d": "as soon as, given that",
+"l": "C1"
+},
+{
+"p": "dès lors",
+"d": "from then on, therefore",
+"l": "C1"
+},
+{
+"p": "alors même que",
+"d": "even though, even when",
+"l": "C1"
+},
+{
+"p": "quand bien même",
+"d": "even if, even though",
+"l": "C1"
+},
+{
+"p": "au motif que",
+"d": "on the grounds that",
+"l": "C1"
+},
+{
+"p": "sous prétexte que",
+"d": "on the pretext that",
+"l": "C1"
+},
+{
+"p": "sous couvert de",
+"d": "under the cover of, on the pretext of",
+"l": "C1"
+},
+{
+"p": "sous l'égide de",
+"d": "under the auspices of",
+"l": "C1"
+},
+{
+"p": "sous la houlette de",
+"d": "under the leadership of",
+"l": "C1"
+},
+{
+"p": "sous le coup de",
+"d": "under the effect of, liable to",
+"l": "C1"
+},
+{
+"p": "à la veille de",
+"d": "on the eve of, just before",
+"l": "B2"
+},
+{
+"p": "au lendemain de",
+"d": "in the wake of, the day after",
+"l": "B2"
+},
+{
+"p": "à la faveur de",
+"d": "thanks to, taking advantage of",
+"l": "C1"
+},
+{
+"p": "à la lumière de",
+"d": "in light of",
+"l": "C1"
+},
+{
+"p": "dans la mesure où",
+"d": "insofar as, since",
+"l": "C1"
+},
+{
+"p": "dans la mesure du possible",
+"d": "as far as possible",
+"l": "B2"
+},
+{
+"p": "dans le but de",
+"d": "in order to, with the aim of",
+"l": "B2"
+},
+{
+"p": "en vue de",
+"d": "with a view to, in preparation for",
+"l": "B2"
+},
+{
+"p": "en l'absence de",
+"d": "in the absence of",
+"l": "B2"
+},
+{
+"p": "au sein de",
+"d": "within, inside",
+"l": "B2"
+},
+{
+"p": "face à",
+"d": "faced with, in the face of",
+"l": "B2"
+},
+{
+"p": "en termes de",
+"d": "in terms of",
+"l": "B2"
+},
+{
+"p": "en amont de",
+"d": "upstream of, before",
+"l": "C1"
+},
+{
+"p": "en aval de",
+"d": "downstream of, after",
+"l": "C1"
+},
+{
+"p": "à savoir",
+"d": "namely, that is to say",
+"l": "B2"
+},
+{
+"p": "à la une",
+"d": "on the front page, in the headlines",
+"l": "B2"
+},
+{
+"p": "à tout bout de champ",
+"d": "at every turn, constantly",
+"l": "C1"
+},
+{
+"p": "sur le terrain",
+"d": "on the ground, in the field",
+"l": "B2"
+},
+{
+"p": "sur le fil du rasoir",
+"d": "on a knife edge",
+"l": "C1"
+},
+{
+"p": "il {convient|convenait|conviendra|conviendrait} de",
+"d": "it is appropriate to, one should",
+"l": "C1",
+"s": "il convient de"
+},
+{
+"p": "{il|ce} s'{agit|agissait|agira|agirait|agissent|agissait} de",
+"d": "it is a question of, it is about",
+"l": "B2",
+"s": "il s'agit de"
+},
+{
+"p": "~faire l'objet de",
+"d": "to be the subject of, to undergo",
+"l": "B2"
+},
+{
+"p": "~faire face à",
+"d": "to face, to deal with",
+"l": "B2"
+},
+{
+"p": "~faire état de",
+"d": "to report, to state",
+"l": "C1"
+},
+{
+"p": "~faire preuve de",
+"d": "to show, to demonstrate",
+"l": "B2"
+},
+{
+"p": "~faire figure de",
+"d": "to be regarded as, to look like",
+"l": "C1"
+},
+{
+"p": "~faire le point",
+"d": "to take stock, to give an update",
+"l": "B2"
+},
+{
+"p": "~faire l'unanimité",
+"d": "to be universally accepted",
+"l": "B2"
+},
+{
+"p": "~faire mouche",
+"d": "to hit the mark, to strike home",
+"l": "C1"
+},
+{
+"p": "~faire l'écho de",
+"d": "to echo, to relay",
+"l": "C1"
+},
+{
+"p": "~mettre en place",
+"d": "to set up, to put in place",
+"l": "B2"
+},
+{
+"p": "~mettre en œuvre",
+"d": "to implement, to carry out",
+"l": "B2"
+},
+{
+"p": "~mettre en cause",
+"d": "to call into question, to implicate",
+"l": "B2"
+},
+{
+"p": "~mettre en garde",
+"d": "to warn",
+"l": "B2"
+},
+{
+"p": "~mettre en lumière",
+"d": "to highlight, to bring to light",
+"l": "C1"
+},
+{
+"p": "~mettre en avant",
+"d": "to put forward, to emphasize",
+"l": "B2"
+},
+{
+"p": "~mettre à mal",
+"d": "to undermine, to damage",
+"l": "C1"
+},
+{
+"p": "~mettre fin à",
+"d": "to put an end to",
+"l": "B2"
+},
+{
+"p": "~mettre un terme à",
+"d": "to put an end to",
+"l": "B2"
+},
+{
+"p": "~mettre le feu aux poudres",
+"d": "to set things off, to spark a crisis",
+"l": "C1"
+},
+{
+"p": "~tenir compte de",
+"d": "to take into account",
+"l": "B2"
+},
+{
+"p": "~tenir bon",
+"d": "to hold firm, to stand fast",
+"l": "C1"
+},
+{
+"p": "~tenir tête à",
+"d": "to stand up to",
+"l": "C1"
+},
+{
+"p": "~tenir lieu de",
+"d": "to serve as, to take the place of",
+"l": "C1"
+},
+{
+"p": "~prendre en charge",
+"d": "to take charge of, to cover, to treat",
+"l": "B2"
+},
+{
+"p": "~prendre en compte",
+"d": "to take into account",
+"l": "B2"
+},
+{
+"p": "~prendre le relais",
+"d": "to take over",
+"l": "C1"
+},
+{
+"p": "~prendre ses distances",
+"d": "to distance oneself",
+"l": "C1"
+},
+{
+"p": "~prendre la parole",
+"d": "to take the floor, to speak",
+"l": "B2"
+},
+{
+"p": "~prendre acte de",
+"d": "to note formally, to acknowledge",
+"l": "C1"
+},
+{
+"p": "~prendre de court",
+"d": "to catch off guard",
+"l": "C1"
+},
+{
+"p": "~prendre le dessus",
+"d": "to gain the upper hand",
+"l": "C1"
+},
+{
+"p": "~prendre au dépourvu",
+"d": "to catch unprepared",
+"l": "C1"
+},
+{
+"p": "~prendre part à",
+"d": "to take part in",
+"l": "B2"
+},
+{
+"p": "~donner lieu à",
+"d": "to give rise to",
+"l": "B2"
+},
+{
+"p": "~donner naissance à",
+"d": "to give birth to, to create",
+"l": "B2"
+},
+{
+"p": "~donner suite à",
+"d": "to follow up on",
+"l": "C1"
+},
+{
+"p": "~donner le ton",
+"d": "to set the tone",
+"l": "C1"
+},
+{
+"p": "~donner du fil à retordre",
+"d": "to give a hard time",
+"l": "C1"
+},
+{
+"p": "~avoir lieu",
+"d": "to take place",
+"l": "B2"
+},
+{
+"p": "~avoir trait à",
+"d": "to relate to, to concern",
+"l": "C1"
+},
+{
+"p": "~avoir recours à",
+"d": "to resort to, to use",
+"l": "B2"
+},
+{
+"p": "~avoir pour objectif de",
+"d": "to have the aim of",
+"l": "B2"
+},
+{
+"p": "~avoir pour but de",
+"d": "to have the aim of",
+"l": "B2"
+},
+{
+"p": "~avoir beau",
+"d": "to do something in vain (avoir beau + infinitive)",
+"l": "C1"
+},
+{
+"p": "~avoir tendance à",
+"d": "to tend to",
+"l": "B2"
+},
+{
+"p": "~avoir du mal à",
+"d": "to struggle to, to find it hard to",
+"l": "B2"
+},
+{
+"p": "~avoir le vent en poupe",
+"d": "to be doing very well, to be on a roll",
+"l": "C1"
+},
+{
+"p": "~être en mesure de",
+"d": "to be able to, to be in a position to",
+"l": "B2"
+},
+{
+"p": "~être à même de",
+"d": "to be in a position to",
+"l": "C1"
+},
+{
+"p": "~être sur le point de",
+"d": "to be about to",
+"l": "B2"
+},
+{
+"p": "~être tenu de",
+"d": "to be required to",
+"l": "C1"
+},
+{
+"p": "~être en proie à",
+"d": "to be prey to, to be gripped by",
+"l": "C1"
+},
+{
+"p": "~être de mise",
+"d": "to be appropriate, to be called for",
+"l": "C1"
+},
+{
+"p": "~être loin de",
+"d": "to be far from",
+"l": "B2"
+},
+{
+"p": "~aller de soi",
+"d": "to be self-evident, to go without saying",
+"l": "C1"
+},
+{
+"p": "~aller de pair avec",
+"d": "to go hand in hand with",
+"l": "C1"
+},
+{
+"p": "~aller jusqu'à",
+"d": "to go as far as",
+"l": "B2"
+},
+{
+"p": "~aller à l'encontre de",
+"d": "to run counter to",
+"l": "C1"
+},
+{
+"p": "~venir à bout de",
+"d": "to overcome, to get the better of",
+"l": "C1"
+},
+{
+"p": "~tirer la sonnette d'alarme",
+"d": "to sound the alarm",
+"l": "C1"
+},
+{
+"p": "~tirer parti de",
+"d": "to take advantage of, to make use of",
+"l": "C1"
+},
+{
+"p": "~jouer la carte de",
+"d": "to play the card of, to bet on",
+"l": "C1"
+},
+{
+"p": "~jeter l'éponge",
+"d": "to throw in the towel",
+"l": "C1"
+},
+{
+"p": "~jeter un pavé dans la mare",
+"d": "to stir things up, to cause a stir",
+"l": "C1"
+},
+{
+"p": "~rendre compte de",
+"d": "to report on, to account for",
+"l": "B2"
+},
+{
+"p": "~rendre hommage à",
+"d": "to pay tribute to",
+"l": "B2"
+}
+]

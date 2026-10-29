@@ -13,6 +13,9 @@
   --rule: #dddddd;
   --hl: #ff3d00;
   --hl-soft: #fff0ea;
+  --hl2: #0057ff;
+  --hl2-soft: #eaf1ff;
+  --hl2-tip: #7aa7ff;
   --err: #b00020;
   --tip-bg: #111111;
   --tip-fg: #ffffff;
@@ -100,6 +103,18 @@ article p.body { font-size: 1.125rem; line-height: 1.75; margin: 0 0 1.1em; max-
 .w:hover, .w.on { background: var(--hl-soft); }
 .w:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
 
+.x, .xmark {
+  text-decoration-line: underline;
+  text-decoration-style: solid;
+  text-decoration-color: var(--hl2);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+.x { cursor: pointer; }
+.x:hover, .x.on { background: var(--hl2-soft); }
+.x:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.opt { display: block; font-family: var(--sans); font-size: 0.8125rem; color: var(--muted); margin-top: 6px; }
+
 #tip {
   position: fixed; z-index: 20; top: 0; left: 0;
   width: max-content;
@@ -116,6 +131,8 @@ article p.body { font-size: 1.125rem; line-height: 1.75; margin: 0 0 1.1em; max-
 #tip .lemma { font-weight: 700; font-size: 1rem; }
 #tip .pos { color: var(--tip-dim); font-style: italic; font-size: 0.8125rem; }
 #tip .lvl { margin-left: auto; font-size: 0.6875rem; letter-spacing: 0.06em; color: var(--hl); font-weight: 700; }
+#tip .lvl.xl { color: var(--hl2-tip); }
+#tip .def { margin-top: 6px; }
 #tip .from { color: var(--tip-dim); font-size: 0.8125rem; margin-top: 2px; }
 #tip ol { margin: 6px 0 0; padding-left: 1.2em; }
 #tip li + li { margin-top: 2px; }
@@ -133,10 +150,12 @@ article p.body { font-size: 1.125rem; line-height: 1.75; margin: 0 0 1.1em; max-
   </div>
 
   <p class="legend">
-    <span class="mark">Dotted underline</span> = likely B2/C1 vocabulary (<span id="count">0</span> words here).
-    Hover on desktop, or tap on mobile, to see the definition.
+    <span class="mark">Dotted orange underline</span> = likely B2/C1 words (<span id="count">0</span> here).
+    <span class="xmark">Solid blue underline</span> = fixed expressions (<span id="xcount">0</span> here).
+    Hover on desktop, or tap on mobile, to see the meaning.
   </p>
   <label class="opt" for="hide-cog"><input type="checkbox" id="hide-cog" checked> Hide words that look like English (cognates)</label>
+  <label class="opt" for="show-expr"><input type="checkbox" id="show-expr" checked> Mark fixed expressions</label>
 
   <form class="load" id="load">
     <label for="f-url">Link to an article
@@ -191,11 +210,73 @@ var enReady = fetch("data/en_words.txt")
     t.split("\n").forEach(function (w, i) { w = w.trim(); if (w && !en.has(w)) en.set(w, i + 1); });
   })
   .catch(function () { en = null; });
-var rankReady = Promise.all([frReady, enReady]);
+// ---------- Fixed expressions (data/expressions.json) ----------
+// Pattern syntax: ~verb matches any form of that verb, {a|b} lists alternatives, "de" also matches des, du and d'.
+var EXPRS = null, showExpr = true;
+var NEG = "(?:\\s+(?:pas|plus|jamais|guère|toujours|déjà|encore|aussi|bien|même|souvent|également))?";
+var VERB_FORMS = {
+  "être": "(?:être|est|es|sont|sommes|êtes|était|étaient|étais|été|étant|sera|seront|serait|seraient|soit|soient|fut|furent|suis|fût)",
+  "avoir": "(?:avoir|a|as|ai|avons|avez|ont|avait|avaient|avais|aura|auront|aurait|auraient|eu|eue|eus|eues|ayant|eut|eurent|aie|aient|ait)",
+  "faire": "(?:faire|fai\\p{L}*|fait|font|fais|fer\\p{L}*|fit|firent|fass\\p{L}*)",
+  "aller": "(?:aller|all\\p{L}*|vais|vas|va|vont|ir\\p{L}*|aill\\p{L}*)",
+  "prendre": "(?:prendr\\p{L}*|pren\\p{L}*|pris\\p{L}*|prit|prirent)",
+  "mettre": "(?:mettr\\p{L}*|mett\\p{L}*|met|mets|mis\\p{L}*|mit|mirent)",
+  "tenir": "(?:tenir|ten\\p{L}*|tien\\p{L}*|tint|tinrent|tiendr\\p{L}*|tenu\\p{L}*)",
+  "venir": "(?:venir|ven\\p{L}*|vien\\p{L}*|vint|vinrent|viendr\\p{L}*|venu\\p{L}*)"
+};
+function escRe(x) { return x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+function verbRe(inf) {
+  if (VERB_FORMS[inf]) return VERB_FORMS[inf];
+  var stem = inf.replace(/(er|ir|re)$/, "");
+  return stem.length < 3 ? escRe(inf) : "(?:" + escRe(inf) + "|" + escRe(stem) + "\\p{L}*)";
+}
+function compileExpr(it) {
+  try {
+    var parts = [], lit = "";
+    it.p.split(/\s+/).forEach(function (tok) {
+      (tok.match(/[^'’]+['’]?/g) || [tok]).forEach(function (pc) {
+        var apos = /['’]$/.test(pc), core = pc.replace(/['’]$/, ""), re;
+        if (core.charAt(0) === "~") re = verbRe(core.slice(1)) + NEG;
+        else if (core.charAt(0) === "{") re = "(?:" + core.slice(1, -1).split("|").map(escRe).join("|") + ")";
+        else if (core === "de") re = "(?:des|du|de|d['’])";
+        else { re = escRe(core); if (core.length > lit.length) lit = core; }
+        if (apos) re += "['’]";
+        parts.push(re);
+      });
+    });
+    var src = "(?<![\\p{L}\\p{N}])" + parts.join("(?:\\s+|(?<=['’]))") + "(?:(?<=['’])|(?![\\p{L}\\p{N}]))";
+    new RegExp(src, "iu");
+    return { src: src, re: null, needle: lit.length >= 3 ? lit.toLowerCase() : "", def: it.d, lvl: it.l, show: it.s || it.p.replace(/~/g, "") };
+  } catch (e) { return null; }
+}
+var exprReady = fetch("data/expressions.json")
+  .then(function (r) { return r.ok ? r.json() : []; })
+  .then(function (list) { EXPRS = list.map(compileExpr).filter(Boolean); })
+  .catch(function () { EXPRS = null; });
+
+function findExpressions(text) {
+  if (!EXPRS || !showExpr) return [];
+  var lower = text.toLowerCase(), found = [];
+  EXPRS.forEach(function (x, i) {
+    if (x.needle && lower.indexOf(x.needle) === -1) return;
+    var re = x.re || (x.re = new RegExp(x.src, "giu")), m;
+    re.lastIndex = 0;
+    while ((m = re.exec(text))) {
+      found.push({ s: m.index, e: m.index + m[0].length, i: i });
+      if (!m[0].length) re.lastIndex++;
+    }
+  });
+  found.sort(function (a, b) { return a.s - b.s || (b.e - b.s) - (a.e - a.s); });
+  var out = [], end = -1;
+  found.forEach(function (f) { if (f.s >= end) { out.push(f); end = f.e; } });
+  return out;
+}
+
+var rankReady = Promise.all([frReady, enReady, exprReady]);
 rankReady.then(function () {
   var d = document.getElementById("diag");
   if (d) d.textContent = " Word lists: French " + (rank ? rank.size.toLocaleString("en-US") : 0) + ", English " +
-    (en ? en.size.toLocaleString("en-US") : "NOT FOUND (expected at data/en_words.txt)") + ". Page version 6.";
+    (en ? en.size.toLocaleString("en-US") : "NOT FOUND (expected at data/en_words.txt)") + ", expressions " + (EXPRS ? EXPRS.length : "NOT FOUND (expected at data/expressions.json)") + ". Page version 7.";
 });
 
 // ---------- Cognates (French words with a clear English twin) ----------
@@ -276,8 +357,8 @@ function levelOf(token) {
 }
 
 // ---------- Rendering (DOM only, never innerHTML with article text) ----------
-var count = 0;
-function addText(parent, text) {
+var count = 0, xcount = 0;
+function addWords(parent, text) {
   var last = 0, m;
   TOKEN.lastIndex = 0;
   while ((m = TOKEN.exec(text))) {
@@ -295,6 +376,21 @@ function addText(parent, text) {
   if (last < text.length) parent.appendChild(document.createTextNode(text.slice(last)));
 }
 
+function addText(parent, text) {
+  var ex = findExpressions(text), last = 0;
+  ex.forEach(function (f) {
+    if (f.s > last) addWords(parent, text.slice(last, f.s));
+    var sp = document.createElement("span");
+    sp.className = "x"; sp.tabIndex = 0; sp.setAttribute("role", "button");
+    sp.dataset.expr = f.i; sp.dataset.form = text.slice(f.s, f.e);
+    sp.textContent = sp.dataset.form;
+    parent.appendChild(sp);
+    xcount++;
+    last = f.e;
+  });
+  if (last < text.length) addWords(parent, text.slice(last));
+}
+
 function el(tag, cls, text) {
   var e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -310,7 +406,7 @@ var lastArticle = null;
 function render(a) {
   lastArticle = a;
   hideTip();
-  count = 0;
+  count = 0; xcount = 0;
   root.textContent = "";
   if (a.notice) { var n = document.createElement("p"); n.className = "notice"; n.textContent = a.notice; root.appendChild(n); }
   if (a.title) { var h = el("h1", "", a.title); root.appendChild(h); }
@@ -335,6 +431,7 @@ function render(a) {
 
   a.paras.forEach(function (p) { root.appendChild(el("p", "body", p)); });
   $("count").textContent = count;
+  $("xcount").textContent = xcount;
 }
 
 var SAMPLE = {
@@ -545,11 +642,25 @@ function fillTip(word, lvl, info) {
 }
 function note(t) { var d = document.createElement("div"); d.className = "dim"; d.textContent = t; return d; }
 
+function fillExpr(e) {
+  var x = EXPRS[+e.dataset.expr];
+  tip.textContent = "";
+  var h = head(x.show, "expression", x.lvl);
+  h.querySelector(".lvl").classList.add("xl");
+  tip.appendChild(h);
+  var norm = function (t) { return t.toLowerCase().replace(/’/g, "'").replace(/\s+/g, " "); };
+  if (norm(e.dataset.form) !== norm(x.show)) {
+    var f = document.createElement("div"); f.className = "from"; f.textContent = "in the text: " + e.dataset.form; tip.appendChild(f);
+  }
+  var d = document.createElement("div"); d.className = "def"; d.textContent = x.def; tip.appendChild(d);
+}
+
 function showTip(e, ev) {
   var word = e.dataset.word, lvl = e.dataset.lvl;
   if (current && current !== e) { current.classList.remove("on"); current.removeAttribute("aria-describedby"); }
   current = e; shownFor = word;
   e.classList.add("on"); e.setAttribute("aria-describedby", "tip");
+  if (e.classList.contains("x")) { fillExpr(e); tip.hidden = false; place(e, ev); return; }
   fillTip(word, lvl, null);
   tip.hidden = false;
   place(e, ev);
@@ -566,7 +677,7 @@ function hideTip() {
   current = null;
 }
 
-function wordFrom(t) { return t && t.closest ? t.closest(".w") : null; }
+function wordFrom(t) { return t && t.closest ? t.closest(".w, .x") : null; }
 
 root.addEventListener("pointerover", function (e) { if (e.pointerType !== "mouse") return; var w = wordFrom(e.target); if (w && !pinned) showTip(w, e); });
 root.addEventListener("pointerout", function (e) { if (e.pointerType !== "mouse") return; var w = wordFrom(e.target); if (w && !pinned && !w.contains(e.relatedTarget)) hideTip(); });
@@ -584,6 +695,10 @@ document.addEventListener("keydown", function (e) { if (e.key === "Escape") hide
 window.addEventListener("scroll", function () { if (current) hideTip(); }, { passive: true });
 window.addEventListener("resize", function () { if (current) hideTip(); });
 
+$("show-expr").addEventListener("change", function (e) {
+  showExpr = e.target.checked;
+  if (lastArticle) render(lastArticle);
+});
 $("hide-cog").addEventListener("change", function (e) {
   hideCognates = e.target.checked;
   if (lastArticle) render(lastArticle);
