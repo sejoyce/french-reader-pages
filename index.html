@@ -195,7 +195,7 @@ var rankReady = Promise.all([frReady, enReady]);
 rankReady.then(function () {
   var d = document.getElementById("diag");
   if (d) d.textContent = " Word lists: French " + (rank ? rank.size.toLocaleString("en-US") : 0) + ", English " +
-    (en ? en.size.toLocaleString("en-US") : "NOT FOUND (expected at data/en_words.txt)") + ". Page version 3.";
+    (en ? en.size.toLocaleString("en-US") : "NOT FOUND (expected at data/en_words.txt)") + ". Page version 4.";
 });
 
 // ---------- Cognates (French words with a clear English twin) ----------
@@ -369,21 +369,37 @@ function wikt(term) {
     .catch(function () { return null; });
 }
 
-function formOfLemma(html) {
-  // Inflected forms read like "third-person plural present of <a title=\"redouter\">redouter</a>".
+var FORM_KEYS = /(participle|inflection|person|plural|feminine|masculine|singular|subjunctive|indicative|imperative|conditional|gerund|spelling|alternative form)/i;
+var NOISE_TITLE = /^(Appendix:|Wiktionary:|Template:|Category:|Special:|w:|wikipedia:)/i;
+var VERB_FORM = /(participle|person|subjunctive|indicative|imperative|conditional|gerund)/i;
+
+// Reads one Wiktionary definition. If it only says "<grammar> of <other word>", returns that other word as lemma.
+function parseDef(html) {
   var d = new DOMParser().parseFromString(html || "", "text/html");
-  var inner = d.querySelector(".form-of-definition");
-  if (!inner) return "";
-  var links = inner.querySelectorAll("a[title]");
-  return links.length ? links[links.length - 1].getAttribute("title") : "";
+  d.querySelectorAll("ul, ol, dl, style, sup").forEach(function (n) { n.remove(); });
+  var text = (d.body.textContent || "").replace(/\s+/g, " ").trim();
+  var marked = d.querySelector(".form-of-definition, .form-of-definition-link");
+  var looksForm = text.length < 160 && FORM_KEYS.test(text) && /\bof\s+\S+\.?$/.test(text);
+  var lemma = "";
+  if (marked || looksForm) {
+    var scope = d.querySelector(".form-of-definition") || d.body;
+    var links = Array.prototype.filter.call(scope.querySelectorAll("a[title]"), function (a) {
+      return !NOISE_TITLE.test(a.getAttribute("title")) && !/Appendix|Glossary/i.test(a.getAttribute("href") || "");
+    });
+    if (links.length) lemma = links[links.length - 1].getAttribute("title");
+    else { var m = /\bof\s+(\S+?)\.?$/.exec(text); if (m) lemma = m[1]; }
+    lemma = lemma.replace(/#.*$/, "").trim();
+  }
+  return { text: text, lemma: lemma };
 }
 
+// Real definitions only: skips lines that just point to another word.
 function pickDefs(entries, max) {
   var out = [];
   (entries || []).forEach(function (e) {
     (e.definitions || []).forEach(function (d) {
-      var t = plain(d.definition);
-      if (t && out.length < max) out.push({ pos: e.partOfSpeech || "", text: t });
+      var x = parseDef(d.definition);
+      if (x.text && !x.lemma && out.length < max) out.push({ pos: e.partOfSpeech || "", text: x.text });
     });
   });
   return out;
@@ -395,16 +411,29 @@ function lookup(word) {
   var p = wikt(key).then(function (data) {
     var fr = data && data.fr;
     if (!fr || !fr.length) return { none: true };
-    var firstHtml = fr[0].definitions && fr[0].definitions[0] && fr[0].definitions[0].definition;
-    var lemma = formOfLemma(firstHtml);
-    if (lemma && lemma.toLowerCase() !== key) {
-      return wikt(lemma).then(function (d2) {
-        var defs = d2 && d2.fr ? pickDefs(d2.fr, 3) : [];
-        return { lemma: lemma, form: plain(firstHtml), defs: defs, pos: defs[0] ? defs[0].pos : "" };
+    var own = [], forms = [];
+    fr.forEach(function (e) {
+      (e.definitions || []).forEach(function (d) {
+        var x = parseDef(d.definition);
+        if (!x.text) return;
+        if (x.lemma && x.lemma.toLowerCase() !== key) forms.push({ text: x.text, lemma: x.lemma });
+        else if (!x.lemma) own.push({ pos: e.partOfSpeech || "", text: x.text });
       });
-    }
-    var defs = pickDefs(fr, 3);
-    return { lemma: key, defs: defs, pos: defs[0] ? defs[0].pos : "" };
+    });
+    if (!forms.length) return { lemma: key, defs: own.slice(0, 3), pos: own[0] ? own[0].pos : "" };
+
+    // An inflected form (for example a past participle): show the base word's real definitions.
+    var base = forms[0];
+    return wikt(base.lemma).then(function (d2) {
+      var entries = (d2 && d2.fr) || [];
+      if (VERB_FORM.test(base.text)) {
+        var verbs = entries.filter(function (e) { return /verb/i.test(e.partOfSpeech || ""); });
+        if (verbs.length) entries = verbs;
+      }
+      var baseDefs = pickDefs(entries, 3);
+      var defs = own.slice(0, 2).concat(baseDefs).slice(0, 4);
+      return { lemma: base.lemma, form: base.text, defs: defs, pos: baseDefs[0] ? baseDefs[0].pos : (own[0] ? own[0].pos : "") };
+    });
   });
   defCache.set(key, p);
   return p;
